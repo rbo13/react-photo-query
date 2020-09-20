@@ -1,5 +1,9 @@
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Pre-requisites:
+1. [Unsplash API Key](https://unsplash.com)
+2. Rename `.env.example` to `.env` and add your Unsplash API Credentials.
+
 ## Available Scripts
 
 In the project directory, you can run:
