@@ -1,30 +1,39 @@
 import React from "react";
-import Unsplash, { toJson } from "unsplash-js";
-
-const unsplash = new Unsplash({
-  accessKey: process.env.REACT_APP_UNSPLASH_ACCESS_KEY,
-})
+import usePhotoSearch from "./hooks/usePhotoSearch";
 
 export default function SearchPhotos() {
   const [query, setQuery] = React.useState("");
-  const [pictures, setPictures] = React.useState([]);
+  const [pageNumber, setPageNumber] = React.useState(1);
+
+  const {
+    photos,
+    loading,
+    error,
+    hasMore,
+  } = usePhotoSearch({ query, pageNumber })
+
+  const observer = React.useRef()
+  const lastPhotoElementRef = React.useCallback(node => {
+    if (loading) return // we dont need to keep requesting to the api if loading
+    if (observer.current) observer.current.disconnect()
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        setPageNumber(prevPageNumber => prevPageNumber + 1)
+      }
+    })
+    if (node) observer.current.observe(node)
+  }, [loading, hasMore])
+
 
   const searchPhotos = async (e) => {
-    e.preventDefault()
-
-    unsplash.search
-      .photos(query)
-      .then(toJson)
-      .then((json) => {
-        return setPictures(json.results)
-      });
+    setQuery(e.target.value)
+    setPageNumber(1)
   }
 
   return (
     <div>
       <form
         className="form"
-        onSubmit={searchPhotos}
       >
         <label className="label" htmlFor="query">
           {" "}
@@ -37,24 +46,41 @@ export default function SearchPhotos() {
           className="input"
           placeholder={`Try "dog" or "apple"`}
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={searchPhotos}
         />
-        <button type="submit" className="button">
+        {/* <button type="submit" className="button">
           Search
-        </button>
+        </button> */}
       </form>
       <div className="card-list">
-        {pictures.map((pic) => (
-          <div className="card" key={pic.id}>
-            <img
-              className="card--image"
-              alt={pic.alt_description}
-              src={pic.urls.full}
-              width="50%"
-              height="50%"
-            ></img>
-          </div>
-        ))}{" "}
+        {photos.map((photo, index) => {
+          if (photos.length === index + 1) {
+            return (
+              <div ref={lastPhotoElementRef} className="card" key={photo.id + index}>
+                <img
+                  className="card--image"
+                  alt={photo.alt_description}
+                  src={photo.urls.full}
+                  width="50%"
+                  height="50%"
+                ></img>
+              </div>
+            )
+          }
+          return (
+            <div className="card" key={photo.id + index}>
+              <img
+                className="card--image"
+                alt={photo.alt_description}
+                src={photo.urls.full}
+                width="50%"
+                height="50%"
+              ></img>
+            </div>
+          )
+        })}{" "}
+        <div>{ loading ? 'Loading...' : null }</div>
+        <div>{ error ? 'Error...' : null }</div>
       </div>
     </div>
   );
